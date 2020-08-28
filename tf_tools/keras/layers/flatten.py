@@ -9,6 +9,7 @@ from tf_tools.debug_tools.common import session_run
 class Flatten(object):
     def __init__(self, **kwargs):
         self._name_scope = tf.name_scope(name=kwargs.get('name', 'flatten'))
+        self._input_shape = kwargs.get('input_shape', None)
 
     def __call__(self, inputs):
         with self._name_scope:
@@ -28,6 +29,11 @@ class Flatten(object):
         return x
 
     def get_dim(self, shape):
+        if self._input_shape is not None:
+            d = 1
+            for e in self._input_shape:
+                d *= e
+            return d
         d = 1
         for i, dim in enumerate(shape):
             if i == 0:

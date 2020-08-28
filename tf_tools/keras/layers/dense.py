@@ -11,7 +11,8 @@ class Dense(object):
         self._units = units
         self._activation = activation
         self._use_bias = use_bias
-        self._kernel_initializer = kernel_initializer or tf.truncated_normal_initializer()
+        # glorot_uniform_initializer() 调用时好像 shape 不能传张量, 可以用 `tf.truncated_normal_initializer`
+        self._kernel_initializer = kernel_initializer or tf.glorot_uniform_initializer()
         self._bias_initalizer = bias_initalizer or tf.zeros_initializer()
         self._dtype = dtype
         self._name_scope = tf.name_scope(name=name)
@@ -20,6 +21,9 @@ class Dense(object):
         self._bias = None
 
     def __call__(self, inputs):
+        return self.call(inputs)
+
+    def call(self, inputs):
         with self._name_scope:
             x = inputs
             if self._kernel is None:

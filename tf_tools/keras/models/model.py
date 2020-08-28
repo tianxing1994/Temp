@@ -42,6 +42,7 @@ class Model(object):
             self._init_data_placeholder(x)
 
         loss = self.loss(self.y_true, self.y_pred)
+
         metrics = list()
         for metric_fn in self.metrics:
             try:
