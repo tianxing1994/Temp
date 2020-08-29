@@ -5,8 +5,9 @@ import os
 
 import tensorflow as tf
 
-from tf_tools.keras.losses.categorical_crossentropy import CategoricalCrossentropy
-from tf_tools.keras.metrics.categorical_accuracy import CategoricalAccuracy
+from config import project_path
+from tf_tools.keras.losses.categorical_crossentropy import SparseCategoricalCrossentropy
+from tf_tools.keras.metrics.categorical_accuracy import SparseCategoricalAccuracy
 from tf_tools.keras.examples.question_classification.load_data import LoadData
 from tf_tools.keras.modeling.cnn_k_max_pool_text import CNNKMaxPoolTextModel
 from tf_tools.keras.modeling.cnn_text import CNNTextModel
@@ -24,8 +25,8 @@ def train_flags_cnn_k_max_pool_text_model():
     tf.flags.DEFINE_integer("k_top", 4, 'layers')
 
     # 48, (1 - 1/4)*48=36, (1 - 2/4)*48=24, (1 - 3/4)*48=12,
-    tf.flags.DEFINE_string("conv1d_size_list", '5,3,3,3', 'conv1d kernel size of each layers')
-    tf.flags.DEFINE_string("filters_list", '32,32,32,32', 'conv1d kernel filters number of each layers, it should be multiple of corresponding `fold size`. ')
+    tf.flags.DEFINE_string("conv1d_size_list", '3,3,3,3', 'conv1d kernel size of each layers')
+    tf.flags.DEFINE_string("filters_list", '128,256,512,1024', 'conv1d kernel filters number of each layers, it should be multiple of corresponding `fold size`. ')
     tf.flags.DEFINE_string("fold_size_list", '2,2,2,2', 'fold size of each layers')
     tf.flags.DEFINE_string("k_list", '36,24,12,6', 'k (k max pool) of each layers. it should less than `seq_len` and decreasing.')
 
@@ -42,11 +43,11 @@ def train_flags_cnn_k_max_pool_text_model():
 
 def train_flags_cnn_text_model():
     tf.flags.DEFINE_integer("epochs", 200, 'epochs. ')
-    tf.flags.DEFINE_float("learning_rate", 1e-3, 'learning rate. ')
+    tf.flags.DEFINE_float("learning_rate", 1e-4, 'learning rate. ')
 
     tf.flags.DEFINE_integer("batch_size", 64, 'batch size. ')
-    tf.flags.DEFINE_integer("seq_len", 12, 'sentence max length. ')
-    tf.flags.DEFINE_integer("embedding_size", 64, 'word embedding size, will be use for word embedding, position embedding. ')
+    tf.flags.DEFINE_integer("seq_len", 48, 'sentence max length. ')
+    tf.flags.DEFINE_integer("embedding_size", 128, 'word embedding size, will be use for word embedding, position embedding. ')
 
     # 48;
     # (None, 50, 32), (None, 52, 32), (None, 26, 32);
@@ -58,10 +59,10 @@ def train_flags_cnn_text_model():
     # tf.flags.DEFINE_string("pool_size_list", '2,2,2,2', 'fold size of each layers')
     # tf.flags.DEFINE_string("feed_forward_units_list", '512,1024,512,256', 'k (k max pool) of each layers. it should less than `seq_len` and decreasing.')
 
-    tf.flags.DEFINE_string("conv1d_size_list", '5,5,5', 'conv1d kernel size of each layers')
-    tf.flags.DEFINE_string("filters_list", '32,32,32', 'conv1d kernel filters number of each layers, it should be multiple of corresponding `fold size`. ')
+    tf.flags.DEFINE_string("conv1d_size_list", '3,3,3', 'conv1d kernel size of each layers')
+    tf.flags.DEFINE_string("filters_list", '128,128,128', 'conv1d kernel filters number of each layers, it should be multiple of corresponding `fold size`. ')
     tf.flags.DEFINE_string("pool_size_list", '2,2,2', 'fold size of each layers')
-    tf.flags.DEFINE_string("feed_forward_units_list", '512,1024,512', 'k (k max pool) of each layers. it should less than `seq_len` and decreasing.')
+    tf.flags.DEFINE_string("feed_forward_units_list", '512,1024,512,256', 'k (k max pool) of each layers. it should less than `seq_len` and decreasing.')
 
     FLAGS = tf.flags.FLAGS
     FLAGS.conv1d_size_list = list(map(lambda x: int(x), FLAGS.conv1d_size_list.split(',')))
@@ -113,11 +114,18 @@ def train():
     FLAGS = train_flags_cnn_text_model()
     print_flags(FLAGS)
 
-    load_data = LoadData(max_len=FLAGS.seq_len)
-    sentences = load_data.sentences
-    classes = load_data.classes
-    vocab_size = load_data.vocabulary_obj.vocab_size
-    n_classes = load_data.classes_obj.n_classes
+    # Dataset: https://www.kaggle.com/ananthu017/question-classification
+    data_path = os.path.join(project_path, 'tf_tools/keras/examples/question_classification/question_classification_dataset.csv')
+    load_data = LoadData(
+        csv_path=data_path,
+        sentence_col_name='Questions',
+        labels_col_name='Category0',
+        max_len=FLAGS.seq_len
+    )
+    sentences = load_data.id_sentences
+    classes = load_data.id_labels
+    vocab_size = load_data._encoder.vocab_size
+    n_classes = load_data._encoder.class_size
 
     # paper: https://www.aclweb.org/anthology/P14-1062.pdf
     # model = CNNKMaxPoolTextModel(
@@ -136,8 +144,6 @@ def train():
 
     model = CNNTextModel(
         vocab_size=vocab_size,
-        batch_size=FLAGS.batch_size,
-        seq_len=FLAGS.seq_len,
         embedding_size=FLAGS.embedding_size,
         conv1d_size_list=FLAGS.conv1d_size_list,
         filters_list=FLAGS.filters_list,
@@ -149,8 +155,8 @@ def train():
 
     model.compile(
         optimizer=tf.train.AdamOptimizer(learning_rate=FLAGS.learning_rate),
-        loss=CategoricalCrossentropy(),
-        metrics=[CategoricalAccuracy(), ]
+        loss=SparseCategoricalCrossentropy(),
+        metrics=[SparseCategoricalAccuracy(), ]
     )
 
     model.fit(

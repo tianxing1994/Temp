@@ -12,7 +12,7 @@ class Conv1D(object):
         self._filters = filters
         self._kernel_size = kernel_size
         self._strides = strides
-        self._padding = padding.lower()
+        self._padding = padding.upper()
         self._activation = activation
         self._use_bias = use_bias
         self._kernel_initializer = kernel_initializer or tf.truncated_normal_initializer(stddev=0.1)
@@ -44,7 +44,7 @@ class Conv1D(object):
                 input=x,
                 filters=self._kernel,
                 strides=(1, self._strides, filter_width, 1),
-                padding='SAME',
+                padding=self._padding,
                 name='conv1d'
             )
             if self._activation is not None:

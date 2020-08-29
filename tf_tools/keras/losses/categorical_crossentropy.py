@@ -13,14 +13,14 @@ class CategoricalCrossentropy(object):
         self._name = name
         self._name_scope = tf.name_scope(self._name)
 
-    def __call__(self, y_true, y_pred, sample_weight=None):
+    def __call__(self, y_true, y_pred):
+        return self.call(y_true, y_pred)
+
+    def call(self, y_true, y_pred):
         with self._name_scope:
-            if sample_weight is None:
-                sample_weight = tf.constant(1, dtype=tf.float32)
-            losses = tf.nn.weighted_cross_entropy_with_logits(
-                logits=y_pred,
+            losses = tf.nn.softmax_cross_entropy_with_logits(
                 labels=y_true,
-                pos_weight=sample_weight
+                logits=y_pred
             )
             losses = tf.reduce_mean(losses)
         return losses

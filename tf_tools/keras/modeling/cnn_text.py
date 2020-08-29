@@ -15,7 +15,7 @@ from tf_tools.debug_tools.common import session_run
 
 
 class CNNTextModel(object):
-    def __init__(self, vocab_size, batch_size, seq_len, embedding_size,
+    def __init__(self, vocab_size, embedding_size,
                  conv1d_size_list, filters_list, pool_size_list, feed_forward_units_list,
                  n_classes, name='cnn_text_model'):
         self._vocab_size = vocab_size
@@ -34,7 +34,6 @@ class CNNTextModel(object):
                 output_dim=self._embedding_size
             ),
         ]
-
         conv_pool_activation_layers = list()
         for i, (filters, kernel_size, pool_size) in enumerate(zip(self._filters_list, self._conv1d_size_list, self._pool_size_list)):
             sub_layers = [
@@ -44,23 +43,14 @@ class CNNTextModel(object):
                     strides=1,
                     activation=tf.nn.relu,
                     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                    padding='full',
+                    padding='same',
                     name='conv1d_{}_1'.format(i+1)
                 ),
-                # Conv1D(
-                #     filters=filters,
-                #     kernel_size=kernel_size,
-                #     strides=1,
-                #     activation=tf.nn.relu,
-                #     kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
-                #     padding='full',
-                #     name='conv1d_{}_2'.format(i+1)
-                # ),
-                # MaxPool1D(
-                #     pool_size=pool_size,
-                #     strides=pool_size,    # 几倍池化就缩小几倍.
-                #     name='max_pool_1d_{}'.format(i+1)
-                # ),
+                MaxPool1D(
+                    pool_size=pool_size,
+                    strides=pool_size,    # 几倍池化就缩小几倍.
+                    name='max_pool_1d_{}'.format(i+1)
+                ),
             ]
             conv_pool_activation_layers.extend(sub_layers)
         layers.extend(conv_pool_activation_layers)
@@ -70,6 +60,7 @@ class CNNTextModel(object):
             sub_layers = [
                 Dense(
                     units=units,
+                    activation=tf.nn.relu,
                     use_bias=True,
                     name='dense_{}'.format(i+1)
                 )

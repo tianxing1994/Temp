@@ -4,36 +4,62 @@ import numpy as np
 
 
 class TextClassifyBase(object):
-    def __init__(self, sentences, labels):
-        self._sentences = sentences
-        self._labels = labels
-        self._id_sentences = None
-        self._id_labels = None
+    def __init__(self):
+        self._words2ids = None
+        self._ids2words = None
+        self._vocab_size = None
 
-    def init_from_data(self, sentences: list, labels: list):
-        raise NotImplementedError('init_from_data')
-
-    def init_from_pkl(self, path: str):
-        raise NotImplementedError('init_from_pkl')
-
-    @property
-    def id_sentences(self):
-        if self._id_sentences is None:
-            self._id_sentences = self.sentences_to_ids(self._sentences)
-        return self._id_sentences
+        self._classes2ids = None
+        self._ids2classes = None
+        self._class_size = None
 
     def sentences_to_ids(self, sentences: list) -> np.ndarray:
         raise NotImplementedError('sentences_to_ids')
 
-    @property
-    def id_labels(self):
-        if self._id_labels is None:
-            self._id_labels = self.labels_to_ids(self._labels)
-        return self._id_labels
-
     def labels_to_ids(self, labels: list) -> np.ndarray:
         raise NotImplementedError('labels_to_ids')
 
+    def _build_words2ids(self) -> dict:
+        raise NotImplementedError('_build_words2ids')
+
+    def _build_classes2ids(self) -> dict:
+        raise NotImplementedError('_build_classes2ids')
+
+    @property
+    def words2ids(self) -> dict:
+        if self._words2ids is None:
+            self._words2ids = self._build_words2ids()
+        return self._words2ids
+
+    @property
+    def ids2words(self) -> dict:
+        if self._ids2words is None:
+            self._ids2words = {v: k for k, v in self._words2ids.items()}
+        return self._ids2words
+
+    @property
+    def vocab_size(self):
+        if self._vocab_size is None:
+            self._vocab_size = len(self.words2ids)
+        return self._vocab_size
+
+    @property
+    def classes2ids(self) -> dict:
+        if self._classes2ids is None:
+            self._classes2ids = self._build_classes2ids()
+        return self._classes2ids
+
+    @property
+    def ids2classes(self) -> dict:
+        if self._ids2classes is None:
+            self._ids2classes = {v: k for k, v in self.classes2ids.items()}
+        return self._ids2classes
+
+    @property
+    def class_size(self):
+        if self._class_size is None:
+            self._class_size = len(self.classes2ids)
+        return self._class_size
 
 
 if __name__ == '__main__':

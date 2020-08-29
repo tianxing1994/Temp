@@ -1,111 +1,75 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import os
-
-import pandas as pd
-
-from tf_tools.data.vocabulary import Vocabulary, Classes
+from tf_tools.data.csv_data import CSVDataSet
+from tf_tools.data.nlp_encoder import TextClassifyEncoder
 from tf_tools.tokenizer.delimiter_tokenizer import DelimiterTokenizer
 
 
-class Dataset(object):
-    """
-    Dataset: https://www.kaggle.com/ananthu017/question-classification
-    """
-    def __init__(self, fpath='./question_classification_dataset.csv'):
-        self._fpath = fpath
+class LoadData(object):
+    def __init__(self, csv_path, sentence_col_name: str, labels_col_name: str,
+                 max_len, min_word_freq=1, max_vocab=None,
+                 padding='<pad>', out_of_vocab='<oov>'):
+        self._csv_path = csv_path
+        self._sentence_col_name = sentence_col_name
+        self._labels_col_name = labels_col_name
+
+        self._max_len = max_len
+        self._min_word_freq = min_word_freq
+        self._max_vocab = max_vocab
+        self._padding = padding
+        self._out_of_vocab = out_of_vocab
+
         self._data = None
+        self._tokenizer = None
+        self._tokenize_sentences = None
+        self._tokenize_labels = None
+        self.init_data()
+
+        self._encoder = None
+        self.init_component()
+
+        self._id_sentences = None
+        self._id_labels = None
+
+    def init_data(self):
+        self._data = CSVDataSet(fpath=self._csv_path).get_data_by_columns(
+            columns=(self._sentence_col_name, self._labels_col_name)
+        )
+        sentences = self._data.loc[:, self._sentence_col_name].tolist()
+        labels = self._data.loc[:, self._labels_col_name].tolist()
+        self._tokenizer = DelimiterTokenizer(sep=' ')
+
+        new_sentences = list()
+        for sentence in sentences:
+            w_list = self._tokenizer.tokenize(sentence)
+            new_sentences.append(w_list)
+        sentences = new_sentences
+        self._tokenize_sentences = sentences
+        self._tokenize_labels = labels
+
+    def init_component(self):
+        self._encoder = TextClassifyEncoder(
+            vocab_data_or_pkl=self._tokenize_sentences,
+            label_data_or_pkl=self._tokenize_labels,
+            max_len=self._max_len,
+            min_word_freq=self._min_word_freq,
+            max_vocab=self._max_vocab,
+            padding=self._padding,
+            out_of_vocab=self._out_of_vocab
+        )
 
     @property
-    def data(self):
-        if self._data is None:
-            self._data = self._init_data()
-        return self._data
+    def id_sentences(self):
+        if self._id_sentences is None:
+            self._id_sentences = self._encoder.sentences_to_ids(
+                sentences=self._tokenize_sentences
+            )
+        return self._id_sentences
 
-    def _init_data(self):
-        data = pd.read_csv(self._fpath)
-        data = data.loc[:, ('Questions', 'Category0', 'Category1', 'Category2')]
-        return data
-
-
-class LoadData(object):
-    def __init__(self, max_len):
-        self._max_len = max_len
-        self._data = Dataset().data
-        self.vocabulary_obj = Vocabulary(
-            max_len=self._max_len,
-            tokenizer=DelimiterTokenizer(sep=' ')
-        )
-        self.classes_obj = Classes()
-
-        self.sentences = None
-        self.classes = None
-        self._init_training_data()
-
-    def _init_training_data(self):
-        data = self._data.loc[:, ('Questions', 'Category0')]
-        sentences, classes = list(), list()
-        for i, row in data.iterrows():
-            sentence = row['Questions']
-            category = row['Category0']
-            sentences.append(sentence)
-            classes.append(category)
-
-        # sentences = self._data['Questions'].tolist()
-        self.vocabulary_obj.init_vocab_from_sentences(sentences)
-        self.sentences = self.vocabulary_obj.sentences_to_ids(sentences)
-
-        # classes = self._data['Category2'].tolist()
-        self.classes_obj.init_from_classes(classes)
-        self.classes = self.classes_obj.classes_to_one_hot(classes)
-
-    def save_component(self, model_path):
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
-        config = dict()
-
-        vocab_config = self.vocabulary_obj.get_config()
-        words2ids_pkl_path = self.vocabulary_obj.save_component(model_path)
-        vocab_config['words2ids_pkl_path'] = words2ids_pkl_path
-        config.update(vocab_config)
-
-        classes_config = self.classes_obj.get_config()
-        classes2ids_pkl_path = self.classes_obj.save_component(model_path)
-        classes_config['classes2ids_pkl_path'] = classes2ids_pkl_path
-        config.update(classes_config)
-
-        return config
-
-
-def demo1():
-    load_data = Dataset()
-    data = load_data.data
-
-    vocabulary_obj = Vocabulary(
-        max_len=15,
-        tokenizer=DelimiterTokenizer(sep=' ')
-    )
-
-    classes_obj = Classes()
-
-    sentences = data['Questions'].tolist()
-    vocabulary_obj.init_vocab_from_sentences(sentences)
-    sentences = vocabulary_obj.sentences_to_ids(sentences)
-    print(sentences)
-
-    classes = data['Category2'].tolist()
-    classes_obj.init_from_classes(classes)
-    classes = classes_obj.classes_to_one_hot(classes)
-    print(classes)
-    return
-
-
-def demo2():
-    load_data = LoadData(max_len=15)
-
-    return
-
-
-if __name__ == '__main__':
-    # demo1()
-    demo2()
+    @property
+    def id_labels(self):
+        if self._id_labels is None:
+            self._id_labels = self._encoder.labels_to_ids(
+                labels=self._tokenize_labels
+            )
+        return self._id_labels

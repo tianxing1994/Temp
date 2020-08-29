@@ -20,6 +20,7 @@ class Sequential(Model):
             x = inputs
             for layer in self.layers:
                 x = layer(x)
+                print(x)
         return x
 
 

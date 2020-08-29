@@ -26,7 +26,7 @@ model.compile(
     metrics=[SparseCategoricalAccuracy(), ]
 )
 
-model.fit(x_train, y_train, batch_size=32, epochs=100)
+model.fit(x_train, y_train, batch_size=32, epochs=5)
 
 
 
