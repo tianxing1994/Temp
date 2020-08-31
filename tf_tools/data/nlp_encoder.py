@@ -5,7 +5,45 @@ import pickle
 
 import numpy as np
 
-from .base import TextClassifyBase
+from .base import LabelsEncoderBase, TextClassifyBase
+
+
+class LabelsEncoder(LabelsEncoderBase):
+    def __init__(self, label_data_or_pkl):
+        super(LabelsEncoder, self).__init__()
+        self._label_data_or_pkl = label_data_or_pkl
+
+    @staticmethod
+    def _build_labels2id_from_pkl(path: str):
+        with open(path, 'rb') as f:
+            classes2ids = pickle.load(f)
+        return classes2ids
+
+    @staticmethod
+    def _build_labels2id_from_data(data: list):
+        unique_classes = list(set(data))
+        ids = list(np.arange(len(unique_classes)))
+        classes2ids = dict(zip(unique_classes, ids))
+        return classes2ids
+
+    def _build_labels2ids(self):
+        if isinstance(self._label_data_or_pkl, str):
+            labels2ids = self._build_labels2id_from_pkl(self._label_data_or_pkl)
+        elif isinstance(self._label_data_or_pkl, list):
+            labels2ids = self._build_labels2id_from_data(self._label_data_or_pkl)
+        else:
+            raise NotImplementedError()
+        return labels2ids
+
+    def labels_to_ids(self, labels: list):
+        result = list()
+        for label in labels:
+            idx = self.labels2ids.get(label)
+            if idx is None:
+                raise KeyError(label)
+            result.append(idx)
+        result = np.array(result)
+        return result
 
 
 class TextClassifyEncoder(TextClassifyBase):

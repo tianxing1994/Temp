@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from tf_tools.data.csv_data import CSVDataSet
+from tf_tools.data.read_file.csv_data import CSVDataSet
 from tf_tools.data.nlp_encoder import TextClassifyEncoder
 from tf_tools.tokenizer.delimiter_tokenizer import DelimiterTokenizer
 

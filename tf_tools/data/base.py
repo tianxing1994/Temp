@@ -3,6 +3,37 @@
 import numpy as np
 
 
+class LabelsEncoderBase(object):
+    def __init__(self):
+        self._labels2ids = None
+        self._ids2labels = None
+        self._labels_size = None
+
+    def labels_to_ids(self, labels: list) -> np.ndarray:
+        raise NotImplementedError('labels_to_ids')
+
+    def _build_labels2ids(self) -> dict:
+        raise NotImplementedError('_build_labels2ids')
+
+    @property
+    def labels2ids(self) -> dict:
+        if self._labels2ids is None:
+            self._labels2ids = self._build_labels2ids()
+        return self._labels2ids
+
+    @property
+    def ids2labels(self) -> dict:
+        if self._ids2labels is None:
+            self._ids2labels = {v: k for k, v in self.labels2ids.items()}
+        return self._ids2labels
+
+    @property
+    def labels_size(self):
+        if self._labels_size is None:
+            self._labels_size = len(self.labels2ids)
+        return self._labels_size
+
+
 class TextClassifyBase(object):
     def __init__(self):
         self._words2ids = None
